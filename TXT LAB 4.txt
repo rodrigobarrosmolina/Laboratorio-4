@@ -1,0 +1,363 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{float}
+
+\geometry{margin=2.5cm}
+
+\lstdefinestyle{sql}{
+    language=SQL,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    stringstyle=\color{orange},
+    commentstyle=\color{gray}\itshape,
+    backgroundcolor=\color{gray!10},
+    frame=single,
+    breaklines=true,
+    showstringspaces=false
+}
+
+\begin{document}
+
+% ========================
+% PORTADA
+% ========================
+\begin{titlepage}
+    \centering
+   
+    \vspace{8cm}
+    {\LARGE \textbf{ICN-292: Sistemas de Información para la Gestión} \par}
+    \vspace{0.5cm}
+    {\Large Laboratorio 4 : SQL  \par}
+    \vspace{2cm}
+    {\large Rodrigo Barros \par}
+    \vspace{0.3cm}
+    {\large \texttt{rbarros@usm.cl} \par}
+    \vspace{2cm}
+    {\large Repositorio GitHub: \par}
+    {\large \url{https://github.com/rodrigobarrosmolina/Laboratorio-4.gite} \par}
+    \vspace{2cm}
+    {\large Segundo Semestre 2026 \par}
+\end{titlepage}
+
+% ========================
+% ENTREGABLE 1
+% ========================
+\section*{Entregable 1: Creación de la base de datos}
+
+\subsection*{Entorno de ejecución}
+
+Las consultas de este laboratorio fueron ejecutadas en
+\textbf{OneCompiler} (\url{https://onecompiler.com/mysql}),
+una plataforma en línea que provee un entorno MySQL 8 sin necesidad
+de instalar software localmente. El motor utilizado es MySQL, por
+lo que toda la sintaxis (tipos de datos, \texttt{AUTO\_INCREMENT},
+\texttt{ENUM}, \texttt{FOREIGN KEY}, etc.) corresponde a ese estándar
+y no es compatible con SQLite u otros gestores.
+
+\subsection*{Script SQL}
+
+El siguiente script crea la base de datos \texttt{austral} desde cero.
+Primero se definen las tablas respetando el orden de las claves
+foráneas: \texttt{colecciones} y \texttt{autores} antes que
+\texttt{libros}, y \texttt{libros} antes que \texttt{pagos}.
+Luego se insertan los datos oficiales del enunciado.
+Los resultados de cada consulta se encuentran en el Anexo A.
+
+\begin{lstlisting}[style=sql]
+CREATE TABLE colecciones (
+    id_coleccion      INT AUTO_INCREMENT,
+    titulo            VARCHAR(120) NOT NULL,
+    fecha_publicacion DATE         NOT NULL,
+    PRIMARY KEY (id_coleccion)
+);
+
+CREATE TABLE autores (
+    id_autor INT AUTO_INCREMENT,
+    nombre   VARCHAR(80)  NOT NULL,
+    pais     VARCHAR(60),
+    genero   ENUM('Comic','Ensayo','Infantil','Novela','Poesia') NOT NULL,
+    PRIMARY KEY (id_autor)
+);
+
+CREATE TABLE libros (
+    id_libro            INT AUTO_INCREMENT,
+    id_autor            INT          NOT NULL,
+    id_coleccion        INT          NOT NULL,
+    titulo              VARCHAR(120) NOT NULL,
+    paginas             INT,
+    ejemplares_vendidos INT,
+    anio                INT,
+    PRIMARY KEY (id_libro),
+    FOREIGN KEY (id_autor)     REFERENCES autores(id_autor),
+    FOREIGN KEY (id_coleccion) REFERENCES colecciones(id_coleccion)
+);
+
+CREATE TABLE pagos (
+    id_pago    INT AUTO_INCREMENT,
+    id_autor   INT           NOT NULL,
+    fecha_pago DATE          NOT NULL,
+    monto      DECIMAL(10,2) NOT NULL,
+    PRIMARY KEY (id_pago),
+    FOREIGN KEY (id_autor) REFERENCES autores(id_autor)
+);
+
+INSERT INTO autores (nombre, pais, genero) VALUES
+    ('Elena Pizarro',     'Chile',          'Novela'),
+    ('Harold Finch',      'Inglaterra',     'Ensayo'),
+    ('Rodrigo Bahamonde', 'Chile',          'Poesia'),
+    ('Valentina Correa',  'Argentina',      'Infantil'),
+    ('Nora Keller',       'Estados Unidos', 'Novela'),
+    ('Kenji Arakawa',     NULL,             'Comic');
+
+INSERT INTO colecciones (titulo, fecha_publicacion) VALUES
+    ('Coleccion Sur',   '2022-01-15'),
+    ('Coleccion Norte', '2023-06-01');
+
+INSERT INTO libros
+    (id_autor, id_coleccion, titulo, paginas, ejemplares_vendidos, anio)
+VALUES
+    (1, 1, 'Cielo de Enero',       210, 1500, 2024),
+    (1, 1, 'Marea Baja',           185,  800, 2023),
+    (1, 2, 'El Norte',             200, 2200, 2024),
+    (2, 1, 'Estrellas que Caen',   240, 3000, 2022),
+    (2, 2, 'Maquinas',             215,  450, 2024),
+    (3, 1, 'Luz Artificial',       300, 1200, 2024),
+    (3, 2, 'Ruido Blanco',         280,  600, 2023),
+    (4, 1, 'El Barrio de Lila',    190, 5000, 2024),
+    (4, 2, 'Antes del Amanecer',   205, 2700, 2024),
+    (4, 1, 'La Calle 8',           175,  900, 2023),
+    (5, 2, 'Flor de Hierro',       195, 4100, 2024),
+    (5, 1, 'Hora Dorada',          220, 1800, 2022);
+
+INSERT INTO pagos (id_autor, fecha_pago, monto) VALUES
+    (1, '2026-03-10', 1500000.00),
+    (1, '2026-07-15', 2200000.00),
+    (4, '2026-05-20',  980000.00);
+\end{lstlisting}
+
+
+% ========================
+% ENTREGABLE 2
+% ========================
+\section*{Entregable 2: Consultas SQL}
+
+Los outputs de cada consulta se encuentran en el Anexo A
+(páginas \pageref{sec:anexo} en adelante).
+
+% -------
+\subsection*{Consulta 1}
+
+La comparación \texttt{pais <> 'Chile'} descarta automáticamente
+los valores NULL, ya que MySQL no evalúa NULL con operadores de
+comparación: cualquier operación contra NULL devuelve NULL, que
+el \texttt{WHERE} trata como falso. Por eso se agrega
+\texttt{OR pais IS NULL} para incluir a Kenji Arakawa.
+
+\begin{lstlisting}[style=sql]
+SELECT nombre, genero
+FROM   autores
+WHERE  pais <> 'Chile' OR pais IS NULL
+ORDER BY nombre;
+\end{lstlisting}
+
+% -------
+\subsection*{Consulta 2}
+
+\begin{lstlisting}[style=sql]
+SELECT titulo, paginas
+FROM   libros
+WHERE  paginas BETWEEN 190 AND 220
+ORDER BY paginas;
+\end{lstlisting}
+
+% -------
+\subsection*{Consulta 3}
+
+\begin{lstlisting}[style=sql]
+SELECT COUNT(*)                 AS total_libros,
+       SUM(ejemplares_vendidos) AS total_ejemplares,
+       AVG(paginas)             AS promedio_paginas,
+       MIN(anio)                AS anio_mas_antiguo,
+       MAX(ejemplares_vendidos) AS max_ejemplares
+FROM   libros;
+\end{lstlisting}
+
+% -------
+\subsection*{Consulta 4}
+
+\begin{lstlisting}[style=sql]
+SELECT DISTINCT genero
+FROM   autores
+ORDER BY genero;
+\end{lstlisting}
+
+% -------
+\subsection*{Consulta 5}
+
+\begin{lstlisting}[style=sql]
+SELECT a.nombre, COUNT(*) AS libros_2024
+FROM   autores a
+JOIN   libros  l ON a.id_autor = l.id_autor
+WHERE  l.anio = 2024
+GROUP BY a.id_autor, a.nombre
+HAVING COUNT(*) > 1
+ORDER BY a.nombre;
+\end{lstlisting}
+
+% -------
+\subsection*{Consulta 6}
+
+\begin{lstlisting}[style=sql]
+SELECT titulo, ejemplares_vendidos
+FROM   libros
+WHERE  anio = 2024 AND ejemplares_vendidos > 2000
+ORDER BY ejemplares_vendidos DESC
+LIMIT 3;
+\end{lstlisting}
+
+% -------
+\subsection*{Consulta 7}
+
+\begin{lstlisting}[style=sql]
+-- INSERT del libro temporal
+INSERT INTO libros (id_autor, id_coleccion, titulo,
+                    paginas, ejemplares_vendidos, anio)
+VALUES (3, 1, 'Papel Mojado', 260, 50, 2024);
+
+-- SELECT previo: ver la fila antes de borrarla
+SELECT * FROM libros WHERE titulo = 'Papel Mojado';
+
+-- DELETE filtrado por titulo
+DELETE FROM libros WHERE titulo = 'Papel Mojado';
+
+-- SELECT posterior: verificar que ya no esta
+SELECT * FROM libros WHERE titulo = 'Papel Mojado';
+\end{lstlisting}
+
+% -------
+\subsection*{Consulta 8}
+
+\begin{lstlisting}[style=sql]
+-- SELECT previo
+SELECT * FROM libros WHERE titulo = 'Cielo de Enero';
+
+-- UPDATE: suma 100 al valor actual
+UPDATE libros
+SET    ejemplares_vendidos = ejemplares_vendidos + 100
+WHERE  titulo = 'Cielo de Enero';
+
+-- SELECT posterior
+SELECT * FROM libros WHERE titulo = 'Cielo de Enero';
+\end{lstlisting}
+
+% -------
+\subsection*{Consulta 9}
+
+\begin{lstlisting}[style=sql]
+SELECT l.titulo            AS libro,
+       c.titulo            AS coleccion,
+       c.fecha_publicacion
+FROM   libros      l
+JOIN   colecciones c ON l.id_coleccion = c.id_coleccion;
+\end{lstlisting}
+
+% -------
+\subsection*{Consulta 10}
+
+\begin{lstlisting}[style=sql]
+-- 10a: lista de pagos con nombre del autor
+SELECT a.nombre, p.fecha_pago, p.monto
+FROM   pagos   p
+JOIN   autores a ON p.id_autor = a.id_autor;
+
+-- 10b: total pagado por autor
+SELECT a.nombre, SUM(p.monto) AS total_pagado
+FROM   pagos   p
+JOIN   autores a ON p.id_autor = a.id_autor
+GROUP BY a.id_autor, a.nombre;
+\end{lstlisting}
+
+% ========================
+% ANEXO A
+% ========================
+\newpage
+\section*{Anexo A: Outputs de las consultas}
+\label{sec:anexo}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{c1.png}
+    \caption{Output consulta 1: autores cuyo país no es Chile o no
+             está registrado, ordenados por nombre.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{c2.png}
+    \caption{Output consulta 2: libros con entre 190 y 220 páginas,
+             ordenados de menor a mayor.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{c3.png}
+    \caption{Output consulta 3: estadísticas globales del catálogo
+             (12 libros, 24\,250 ejemplares, promedio 217,92 páginas,
+             año más antiguo 2022, máximo 5\,000 ejemplares).}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{c4.png}
+    \caption{Output consulta 4: géneros literarios distintos
+             presentes en la tabla \texttt{autores}.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{c5.png}
+    \caption{Output consulta 5: autores con más de un libro publicado
+             en 2024 (Elena Pizarro y Valentina Correa, 2 libros cada una).}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{c6.png}
+    \caption{Output consulta 6: los 3 libros más vendidos de 2024
+             con más de 2\,000 ejemplares.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{c7.png}
+    \caption{Output consultas 7 y 8: INSERT de \textit{Papel Mojado},
+             SELECT previo que confirma su existencia, DELETE y SELECT
+             posterior con conjunto vacío; seguido del SELECT previo de
+             \textit{Cielo de Enero} (1\,500 ejemplares), UPDATE que
+             suma 100 y SELECT posterior que confirma 1\,600 ejemplares.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{c8.png}
+    \caption{Output consulta 9: JOIN entre \texttt{libros} y
+             \texttt{colecciones}, mostrando la colección asignada y
+             fecha de publicación para los 12 libros.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{c9.png}
+    \caption{Output consulta 10: lista de los 3 pagos registrados con
+             nombre del autor, fecha y monto; y resumen del total pagado
+             por autor (Elena Pizarro \$3\,700\,000 y Valentina Correa
+             \$980\,000).}
+\end{figure}
+
+\end{document}
